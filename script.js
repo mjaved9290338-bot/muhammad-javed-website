@@ -139,3 +139,65 @@ document.getElementById('save-btn').addEventListener('click', () => {
   promptForm.classList.add('hidden');
   renderPrompts();
 });
+
+// ===== Site login gate (website ke shuru ka login page) =====
+// Wahi passcode (PASS_KEY) jo Prompts section ka hai — ek hi code dono jagah chalega.
+(function () {
+  const gate = document.getElementById('site-gate');
+  if (!gate) return;
+  const gTitle = document.getElementById('gate-title');
+  const gMsg = document.getElementById('gate-msg');
+  const gBtn = document.getElementById('gate-btn');
+  const gHint = document.getElementById('gate-hint');
+  const gInput = document.getElementById('gate-passcode');
+  const gGuest = document.getElementById('gate-guest');
+  const GATE_SESSION = 'mjaved_gate_entry';
+
+  function gateHint(msg, cls) {
+    gHint.textContent = msg;
+    gHint.className = 'auth-hint ' + (cls || '');
+  }
+  function refreshGate() {
+    if (!localStorage.getItem(PASS_KEY)) {
+      gTitle.textContent = '🔐 Pehli Dafa Setup';
+      gMsg.textContent = 'Owner hein? Apna naya passcode banayein (kam az kam 4 characters):';
+      gBtn.textContent = 'Passcode Set Karke Dakhil Hon';
+    } else {
+      gTitle.textContent = '🔐 Login';
+      gMsg.textContent = 'Owner hein? Apna passcode likhein:';
+      gBtn.textContent = 'Login';
+    }
+  }
+  function unlock(mode) {
+    sessionStorage.setItem(GATE_SESSION, mode);
+    gate.classList.add('hidden');
+    document.body.classList.remove('gate-locked');
+    if (mode === 'owner') { try { enterApp(); } catch (e) {} }
+  }
+  function doGateAuth() {
+    const val = gInput.value.trim();
+    if (val.length < 4) { gateHint('Passcode kam az kam 4 characters ka ho!', 'err'); return; }
+    if (!localStorage.getItem(PASS_KEY)) {
+      localStorage.setItem(PASS_KEY, val);
+      gateHint('✅ Passcode set ho gaya! Khush Aamdeed.', 'ok');
+      setTimeout(() => unlock('owner'), 600);
+    } else if (val === localStorage.getItem(PASS_KEY)) {
+      unlock('owner');
+    } else {
+      gateHint('❌ Ghalat passcode! Dobara try karein.', 'err');
+      gInput.value = '';
+    }
+  }
+
+  const prior = sessionStorage.getItem(GATE_SESSION);
+  if (prior) {
+    gate.classList.add('hidden');
+    if (prior === 'owner') { try { enterApp(); } catch (e) {} }
+  } else {
+    document.body.classList.add('gate-locked');
+    refreshGate();
+  }
+  gBtn.addEventListener('click', doGateAuth);
+  gInput.addEventListener('keydown', e => { if (e.key === 'Enter') doGateAuth(); });
+  gGuest.addEventListener('click', () => unlock('guest'));
+})();
